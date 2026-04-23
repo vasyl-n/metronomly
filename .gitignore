@@ -1,3 +1,9 @@
 .DS_Store
 .claude/
-config.js
+
+# Extension — API key stays local
+extension/config.js
+
+# Worker
+worker/node_modules/
+worker/.wrangler/
