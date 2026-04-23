@@ -1,22 +1,22 @@
-// ─── CONFIG ────────────────────────────────────────────────────────────────
-const API_KEY = 'YOUR_API_KEY_HERE'; // Get free key at getsongbpm.com/api
+// ─── CONFIG ─────────────────────────────────────────────────────────────────
+const API_KEY  = 'YOUR_API_KEY_HERE';
 const API_BASE = 'https://api.getsong.co';
 
-// ─── STATE ─────────────────────────────────────────────────────────────────
-let bpm = 120;
-let beatsPerBar = 4;
-let isPlaying = false;
-let currentBeat = 0;
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let bpm          = 120;
+let beatsPerBar  = 4;
+let isPlaying    = false;
+let currentBeat  = 0;
 let nextBeatTime = 0;
-let tapTimes = [];
-let audioCtx = null;
+let tapTimes     = [];
+let audioCtx     = null;
 let schedulerTimer = null;
-let animationFrame = null;
 
-let currentSong = null; // { name, artist, bpm }
-let setlist = [];
+let currentSong = null;
+let setlist     = [];
+let bpmCache    = {};
 
-// ─── DOM REFS ───────────────────────────────────────────────────────────────
+// ─── DOM REFS ────────────────────────────────────────────────────────────────
 const songInput    = document.getElementById('songInput');
 const searchBtn    = document.getElementById('searchBtn');
 const songCard     = document.getElementById('songCard');
@@ -26,55 +26,75 @@ const bpmBadge     = document.getElementById('bpmBadge');
 const searchError  = document.getElementById('searchError');
 const searchLoading= document.getElementById('searchLoading');
 
-const bpmDisplay   = document.getElementById('bpmDisplay');
-const bpmSlider    = document.getElementById('bpmSlider');
-const beatDotsEl   = document.getElementById('beatDots');
-const playBtn      = document.getElementById('playBtn');
-const minusBtn     = document.getElementById('minusBtn');
-const plusBtn      = document.getElementById('plusBtn');
-const tapBtn       = document.getElementById('tapBtn');
+const bpmDisplay = document.getElementById('bpmDisplay');
+const bpmSlider  = document.getElementById('bpmSlider');
+const beatDotsEl = document.getElementById('beatDots');
+const playBtn    = document.getElementById('playBtn');
+const minusBtn   = document.getElementById('minusBtn');
+const plusBtn    = document.getElementById('plusBtn');
+const tapBtn     = document.getElementById('tapBtn');
 
 const addSongBtn   = document.getElementById('addSongBtn');
 const setlistEl    = document.getElementById('setlist');
 const setlistEmpty = document.getElementById('setlistEmpty');
 
-// ─── BPM LOOKUP ─────────────────────────────────────────────────────────────
+// ─── CACHE ───────────────────────────────────────────────────────────────────
+function cacheKey(query) {
+  return query.toLowerCase().trim();
+}
+
+function loadCache() {
+  chrome.storage.local.get('metronomly_bpm_cache', (data) => {
+    if (data.metronomly_bpm_cache) bpmCache = data.metronomly_bpm_cache;
+  });
+}
+
+function saveCache() {
+  chrome.storage.local.set({ metronomly_bpm_cache: bpmCache });
+}
+
+// ─── BPM LOOKUP ──────────────────────────────────────────────────────────────
 async function searchSong(query) {
+  const key = cacheKey(query);
+
+  if (bpmCache[key]) {
+    currentSong = bpmCache[key];
+    showSongCard(currentSong);
+    setBPM(currentSong.bpm);
+    addSongBtn.disabled = false;
+    return;
+  }
+
   showState('loading');
   try {
-    // Step 1: search for song
-    const searchRes = await fetch(
-      `${API_BASE}/search/?api_key=${API_KEY}&type=song&lookup=${encodeURIComponent(query)}`
-    );
+    const searchRes  = await fetch(`${API_BASE}/search/?api_key=${API_KEY}&type=song&lookup=${encodeURIComponent(query)}`);
     const searchData = await searchRes.json();
 
     if (!searchData.search || searchData.search.length === 0) {
       showState('error'); return;
     }
 
-    const firstResult = searchData.search[0];
-    const songId = firstResult.id;
-
-    // Step 2: fetch full song details with BPM
-    const songRes = await fetch(
-      `${API_BASE}/song/?api_key=${API_KEY}&id=${songId}`
-    );
+    const songId  = searchData.search[0].id;
+    const songRes = await fetch(`${API_BASE}/song/?api_key=${API_KEY}&id=${songId}`);
     const songData = await songRes.json();
-    const song = songData.song;
+    const song     = songData.song;
 
     if (!song || !song.tempo) {
       showState('error'); return;
     }
 
-    const foundSong = {
-      name: song.title,
+    const found = {
+      name:   song.title,
       artist: song.artist?.name || 'Unknown Artist',
-      bpm: Math.round(parseFloat(song.tempo))
+      bpm:    Math.round(parseFloat(song.tempo)),
     };
 
-    currentSong = foundSong;
-    showSongCard(foundSong);
-    setBPM(foundSong.bpm);
+    bpmCache[key] = found;
+    saveCache();
+
+    currentSong = found;
+    showSongCard(found);
+    setBPM(found.bpm);
     addSongBtn.disabled = false;
 
   } catch (err) {
@@ -88,16 +108,29 @@ function showState(state) {
   searchError.classList.add('hidden');
   searchLoading.classList.add('hidden');
   if (state === 'loading') searchLoading.classList.remove('hidden');
-  if (state === 'error') searchError.classList.remove('hidden');
-  if (state === 'card') songCard.classList.remove('hidden');
+  if (state === 'error')   searchError.classList.remove('hidden');
+  if (state === 'card')    songCard.classList.remove('hidden');
 }
 
 function showSongCard(song) {
-  songNameEl.textContent = song.name;
+  songNameEl.textContent  = song.name;
   songArtistEl.textContent = song.artist;
-  bpmBadge.textContent = `${song.bpm} BPM`;
+  bpmBadge.textContent    = `${song.bpm} BPM`;
   showState('card');
 }
+
+// ─── SEARCH EVENTS ───────────────────────────────────────────────────────────
+searchBtn.addEventListener('click', () => {
+  const q = songInput.value.trim();
+  if (q) searchSong(q);
+});
+
+songInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    const q = songInput.value.trim();
+    if (q) searchSong(q);
+  }
+});
 
 // ─── METRONOME ENGINE ────────────────────────────────────────────────────────
 function getAudioContext() {
@@ -106,8 +139,8 @@ function getAudioContext() {
 }
 
 function scheduleClick(time, isAccent) {
-  const ctx = getAudioContext();
-  const osc = ctx.createOscillator();
+  const ctx  = getAudioContext();
+  const osc  = ctx.createOscillator();
   const gain = ctx.createGain();
   osc.connect(gain);
   gain.connect(ctx.destination);
@@ -123,15 +156,14 @@ function scheduleClick(time, isAccent) {
 }
 
 function scheduler() {
-  const ctx = getAudioContext();
+  const ctx            = getAudioContext();
   const secondsPerBeat = 60.0 / bpm;
-  const scheduleAhead = 0.1;
 
-  while (nextBeatTime < ctx.currentTime + scheduleAhead) {
+  while (nextBeatTime < ctx.currentTime + 0.1) {
     const isAccent = currentBeat === 0;
     scheduleClick(nextBeatTime, isAccent);
     animateBeat(currentBeat, nextBeatTime - ctx.currentTime);
-    currentBeat = (currentBeat + 1) % beatsPerBar;
+    currentBeat  = (currentBeat + 1) % beatsPerBar;
     nextBeatTime += secondsPerBeat;
   }
 
@@ -153,7 +185,7 @@ function animateBeat(beatIndex, delay) {
 function startMetronome() {
   const ctx = getAudioContext();
   if (ctx.state === 'suspended') ctx.resume();
-  currentBeat = 0;
+  currentBeat  = 0;
   nextBeatTime = ctx.currentTime + 0.05;
   scheduler();
   isPlaying = true;
@@ -166,12 +198,10 @@ function stopMetronome() {
   isPlaying = false;
   playBtn.textContent = '▶  Play';
   playBtn.classList.remove('playing');
-  beatDotsEl.querySelectorAll('.beat-dot').forEach(d => {
-    d.classList.remove('pulse', 'active');
-  });
+  beatDotsEl.querySelectorAll('.beat-dot').forEach(d => d.classList.remove('pulse', 'active'));
 }
 
-// ─── BPM CONTROLS ───────────────────────────────────────────────────────────
+// ─── BPM CONTROLS ────────────────────────────────────────────────────────────
 function setBPM(val) {
   bpm = Math.min(300, Math.max(20, val));
   bpmDisplay.textContent = bpm;
@@ -180,10 +210,10 @@ function setBPM(val) {
 
 bpmSlider.addEventListener('input', () => setBPM(parseInt(bpmSlider.value)));
 minusBtn.addEventListener('click', () => setBPM(bpm - 5));
-plusBtn.addEventListener('click', () => setBPM(bpm + 5));
-playBtn.addEventListener('click', () => isPlaying ? stopMetronome() : startMetronome());
+plusBtn.addEventListener('click',  () => setBPM(bpm + 5));
+playBtn.addEventListener('click',  () => isPlaying ? stopMetronome() : startMetronome());
 
-// Tap tempo
+// ─── TAP TEMPO ───────────────────────────────────────────────────────────────
 tapBtn.addEventListener('click', () => {
   const now = Date.now();
   tapTimes.push(now);
@@ -191,14 +221,11 @@ tapBtn.addEventListener('click', () => {
 
   if (tapTimes.length >= 2) {
     const intervals = [];
-    for (let i = 1; i < tapTimes.length; i++) {
-      intervals.push(tapTimes[i] - tapTimes[i - 1]);
-    }
-    const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
-    setBPM(Math.round(60000 / avgInterval));
+    for (let i = 1; i < tapTimes.length; i++) intervals.push(tapTimes[i] - tapTimes[i - 1]);
+    const avg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+    setBPM(Math.round(60000 / avg));
   }
 
-  // Reset tap after 2s inactivity
   clearTimeout(tapBtn._resetTimer);
   tapBtn._resetTimer = setTimeout(() => { tapTimes = []; }, 2000);
 });
@@ -223,80 +250,6 @@ function renderBeatDots() {
   }
 }
 
-// ─── SEARCH ──────────────────────────────────────────────────────────────────
-searchBtn.addEventListener('click', () => {
-  const q = songInput.value.trim();
-  if (q) searchSong(q);
-});
-
-songInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') {
-    const q = songInput.value.trim();
-    if (q) searchSong(q);
-  }
-});
-
-// If no API key, use demo mode
-function isDemoMode() {
-  return API_KEY === 'YOUR_API_KEY_HERE';
-}
-
-async function searchSongOrDemo(query) {
-  if (isDemoMode()) {
-    searchSong_demo(query);
-  } else {
-    searchSong(query);
-  }
-}
-
-// Demo mode: fake BPM data for common songs so users can test without an API key
-function searchSong_demo(query) {
-  showState('loading');
-  const demos = {
-    'blinding lights': { name: 'Blinding Lights', artist: 'The Weeknd', bpm: 171 },
-    'as it was': { name: 'As It Was', artist: 'Harry Styles', bpm: 174 },
-    'levitating': { name: 'Levitating', artist: 'Dua Lipa', bpm: 103 },
-    'stay': { name: 'STAY', artist: 'The Kid LAROI & Justin Bieber', bpm: 170 },
-    'bad guy': { name: 'bad guy', artist: 'Billie Eilish', bpm: 135 },
-    'shape of you': { name: 'Shape of You', artist: 'Ed Sheeran', bpm: 96 },
-    'uptown funk': { name: 'Uptown Funk', artist: 'Mark Ronson ft. Bruno Mars', bpm: 115 },
-    'bohemian rhapsody': { name: 'Bohemian Rhapsody', artist: 'Queen', bpm: 72 },
-    'hotel california': { name: 'Hotel California', artist: 'Eagles', bpm: 75 },
-    'smells like teen spirit': { name: 'Smells Like Teen Spirit', artist: 'Nirvana', bpm: 117 },
-  };
-
-  setTimeout(() => {
-    const key = query.toLowerCase().trim();
-    const match = Object.keys(demos).find(k => key.includes(k) || k.includes(key));
-    if (match) {
-      currentSong = demos[match];
-      showSongCard(currentSong);
-      setBPM(currentSong.bpm);
-      addSongBtn.disabled = false;
-    } else {
-      // Generate a plausible random BPM for unknown songs
-      const fakeBpm = Math.floor(Math.random() * 100) + 80;
-      currentSong = { name: query, artist: 'Unknown Artist', bpm: fakeBpm };
-      showSongCard(currentSong);
-      setBPM(fakeBpm);
-      addSongBtn.disabled = false;
-    }
-  }, 600);
-}
-
-// Override search to use demo if no API key
-searchBtn.addEventListener('click', () => {}, { once: true }); // remove placeholder
-searchBtn.onclick = () => {
-  const q = songInput.value.trim();
-  if (q) searchSongOrDemo(q);
-};
-songInput.onkeydown = (e) => {
-  if (e.key === 'Enter') {
-    const q = songInput.value.trim();
-    if (q) searchSongOrDemo(q);
-  }
-};
-
 // ─── SETLIST ─────────────────────────────────────────────────────────────────
 addSongBtn.disabled = true;
 
@@ -310,8 +263,7 @@ addSongBtn.addEventListener('click', () => {
 });
 
 function renderSetlist() {
-  const items = setlistEl.querySelectorAll('.setlist-item');
-  items.forEach(i => i.remove());
+  setlistEl.querySelectorAll('.setlist-item').forEach(i => i.remove());
 
   if (setlist.length === 0) {
     setlistEmpty.style.display = '';
@@ -371,14 +323,7 @@ function escHtml(str) {
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// ─── INIT ─────────────────────────────────────────────────────────────────────
+// ─── INIT ────────────────────────────────────────────────────────────────────
+loadCache();
 loadSetlist();
 renderBeatDots();
-
-// Show demo mode notice if no API key
-if (isDemoMode()) {
-  const notice = document.createElement('div');
-  notice.style.cssText = 'font-size:10px;color:#f59e0b;background:#fffbeb;border:0.5px solid #fde68a;border-radius:6px;padding:5px 10px;margin-bottom:8px;text-align:center;';
-  notice.textContent = '⚠ Demo mode — add your API key in popup.js';
-  document.querySelector('.section').prepend(notice);
-}
