@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Metronomly</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="popup.css"/>
+</head>
+<body>
+  <div class="shell">
+
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <circle cx="8" cy="8" r="6" stroke="#fff" stroke-width="1.5"/>
+          <line x1="8" y1="3.5" x2="8" y2="8" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="8" y1="8" x2="11" y2="10" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <span class="logo-text">Metronomly</span>
+      <span class="beta-badge">beta</span>
+    </header>
+
+    <!-- Search -->
+    <section class="section">
+      <div class="search-row">
+        <input id="songInput" class="search-input" type="text" placeholder="Search song name..." autocomplete="off" />
+        <button id="searchBtn" class="search-btn">Find BPM</button>
+      </div>
+      <div id="songCard" class="song-card hidden">
+        <div class="song-thumb" id="songThumb">♩</div>
+        <div class="song-info">
+          <div class="song-name" id="songName">—</div>
+          <div class="song-artist" id="songArtist">—</div>
+        </div>
+        <div class="bpm-badge" id="bpmBadge">— BPM</div>
+      </div>
+      <div id="searchError" class="search-error hidden">Song not found. Try adding the artist name.</div>
+      <div id="searchLoading" class="search-loading hidden">Searching<span class="dots">...</span></div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Metronome -->
+    <section class="section">
+      <div class="section-label">Tempo</div>
+      <div class="bpm-row">
+        <span class="bpm-number" id="bpmDisplay">120</span>
+        <span class="bpm-unit">bpm</span>
+      </div>
+      <input id="bpmSlider" class="bpm-slider" type="range" min="20" max="300" value="120" step="1"/>
+
+      <div class="beat-dots" id="beatDots">
+        <div class="beat-dot accent"></div>
+        <div class="beat-dot"></div>
+        <div class="beat-dot"></div>
+        <div class="beat-dot"></div>
+      </div>
+
+      <div class="timesig-row">
+        <button class="timesig-btn sel" data-beats="4">4/4</button>
+        <button class="timesig-btn" data-beats="3">3/4</button>
+        <button class="timesig-btn" data-beats="6">6/8</button>
+        <button class="timesig-btn" data-beats="5">5/4</button>
+      </div>
+
+      <div class="controls-row">
+        <button id="minusBtn" class="ctrl-btn">−5</button>
+        <button id="playBtn" class="ctrl-btn play">▶  Play</button>
+        <button id="plusBtn" class="ctrl-btn">+5</button>
+        <button id="tapBtn" class="ctrl-btn tap">Tap</button>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Setlist -->
+    <section class="section">
+      <div class="setlist-header">
+        <span class="section-label" style="margin-bottom:0">My Setlist</span>
+        <button id="addSongBtn" class="add-btn" title="Add current song to setlist">+ Add</button>
+      </div>
+      <div id="setlist" class="setlist">
+        <div class="setlist-empty" id="setlistEmpty">No songs yet. Search a song and add it.</div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      BPM data by <a href="https://getsongbpm.com" target="_blank">GetSongBPM</a>
+    </footer>
+
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
