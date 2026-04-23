@@ -6,3 +6,4 @@ workers_dev = true
 [[kv_namespaces]]
 binding = "BPM_CACHE"
 id = "d09ef64b0cf54003921234ba6c184ce7"
+

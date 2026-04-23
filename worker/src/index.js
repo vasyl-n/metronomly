@@ -17,6 +17,7 @@ export default {
 
     if (url.pathname === '/search') return handleSearch(url, env);
     if (url.pathname === '/song')   return handleSong(url, env);
+    if (url.pathname === '/stats')  return handleStats(env);
 
     return json({ error: 'Not found' }, 404);
   },
@@ -29,7 +30,11 @@ async function handleSearch(url, env) {
   const cacheKey = `search:${query.toLowerCase().trim()}`;
 
   const cached = await env.BPM_CACHE.get(cacheKey);
-  if (cached) return json(JSON.parse(cached));
+  if (cached) {
+    increment(env, 'searches');
+    increment(env, 'cache_hits');
+    return json(JSON.parse(cached));
+  }
 
   const res  = await fetch(
     `https://api.getsong.co/search/?api_key=${env.API_KEY}&type=song&lookup=${encodeURIComponent(query)}`
@@ -43,9 +48,13 @@ async function handleSearch(url, env) {
       artist: r.artist?.name || 'Unknown Artist',
     }));
     await env.BPM_CACHE.put(cacheKey, JSON.stringify(results), { expirationTtl: CACHE_TTL });
+    increment(env, 'searches');
+    increment(env, 'api_calls');
     return json(results);
   }
 
+  increment(env, 'searches');
+  increment(env, 'empty_results');
   return json([]);
 }
 
@@ -56,7 +65,11 @@ async function handleSong(url, env) {
   const cacheKey = `song:${id}`;
 
   const cached = await env.BPM_CACHE.get(cacheKey);
-  if (cached) return json(JSON.parse(cached));
+  if (cached) {
+    increment(env, 'song_selects');
+    increment(env, 'cache_hits');
+    return json(JSON.parse(cached));
+  }
 
   const res  = await fetch(
     `https://api.getsong.co/song/?api_key=${env.API_KEY}&id=${id}`
@@ -64,7 +77,10 @@ async function handleSong(url, env) {
   const data = await res.json();
   const song = data.song;
 
-  if (!song?.tempo) return json({ error: 'Song not found' }, 404);
+  if (!song?.tempo) {
+    increment(env, 'errors');
+    return json({ error: 'Song not found' }, 404);
+  }
 
   const result = {
     id:      song.id,
@@ -76,7 +92,25 @@ async function handleSong(url, env) {
   };
 
   await env.BPM_CACHE.put(cacheKey, JSON.stringify(result), { expirationTtl: CACHE_TTL });
+  increment(env, 'song_selects');
+  increment(env, 'api_calls');
   return json(result);
+}
+
+async function handleStats(env) {
+  const keys = ['searches', 'song_selects', 'cache_hits', 'api_calls', 'empty_results', 'errors'];
+  const values = await Promise.all(keys.map(k => env.BPM_CACHE.get(`stats:${k}`)));
+  const stats = Object.fromEntries(keys.map((k, i) => [k, parseInt(values[i] || '0')]));
+  const total = stats.searches + stats.song_selects;
+  stats.cache_hit_rate = total ? `${Math.round((stats.cache_hits / total) * 100)}%` : 'n/a';
+  return json(stats);
+}
+
+async function increment(env, key) {
+  try {
+    const current = parseInt(await env.BPM_CACHE.get(`stats:${key}`) || '0');
+    await env.BPM_CACHE.put(`stats:${key}`, String(current + 1));
+  } catch (e) {}
 }
 
 function json(data, status = 200) {
