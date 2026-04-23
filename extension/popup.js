@@ -33,6 +33,7 @@ const minusBtn   = document.getElementById('minusBtn');
 const plusBtn    = document.getElementById('plusBtn');
 const tapBtn     = document.getElementById('tapBtn');
 
+const clearSongBtn    = document.getElementById('clearSongBtn');
 const addSongBtn      = document.getElementById('addSongBtn');
 const setlistEl       = document.getElementById('setlist');
 const setlistEmpty    = document.getElementById('setlistEmpty');
@@ -152,6 +153,13 @@ function showSongCard(song) {
   bpmBadge.textContent     = `${song.bpm} BPM`;
   showState('card');
 }
+
+clearSongBtn.addEventListener('click', () => {
+  currentSong = null;
+  addSongBtn.disabled = true;
+  showState('none');
+  renderSetlist();
+});
 
 // ─── SEARCH EVENTS ───────────────────────────────────────────────────────────
 searchBtn.addEventListener('click', () => {
@@ -302,7 +310,7 @@ addSongBtn.addEventListener('click', () => {
   if (!currentSong) return;
   const exists = setlist.find(s => s.name === currentSong.name && s.artist === currentSong.artist);
   if (exists) return;
-  setlist.push({ ...currentSong });
+  setlist.push({ ...currentSong, bpm });
   saveSetlist();
   renderSetlist();
 });
@@ -337,6 +345,37 @@ function renderSetlist() {
       setlist.splice(idx, 1);
       saveSetlist();
       renderSetlist();
+    });
+
+    item.querySelector('.si-bpm').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const bpmEl = item.querySelector('.si-bpm');
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.className = 'si-bpm-input';
+      input.value = song.bpm;
+      input.min = 20;
+      input.max = 300;
+      bpmEl.replaceWith(input);
+      input.focus();
+      input.select();
+
+      const commit = () => {
+        const val = Math.min(300, Math.max(20, parseInt(input.value) || song.bpm));
+        setlist[idx].bpm = val;
+        if (currentSong && currentSong.name === song.name && currentSong.artist === song.artist) {
+          currentSong.bpm = val;
+          setBPM(val);
+        }
+        saveSetlist();
+        renderSetlist();
+      };
+
+      input.addEventListener('blur', commit);
+      input.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter') { input.blur(); }
+        if (ev.key === 'Escape') renderSetlist();
+      });
     });
 
     item.addEventListener('click', (e) => {

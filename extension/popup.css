@@ -119,7 +119,27 @@ body {
   align-items: center;
   gap: 11px;
   animation: fadeIn 0.2s ease;
+  position: relative;
 }
+.song-clear-btn {
+  position: absolute;
+  top: 5px;
+  right: 7px;
+  width: 16px;
+  height: 16px;
+  border: none;
+  background: none;
+  color: #c4c9d4;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.1s;
+}
+.song-clear-btn:hover { color: #6b7280; }
 .song-thumb {
   width: 36px; height: 36px;
   border-radius: 7px;
@@ -428,6 +448,21 @@ body {
   font-size: 11px;
   color: #9ca3af;
   font-family: 'DM Mono', monospace;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.si-bpm:hover { color: #4361ee; }
+.si-bpm-input {
+  width: 44px;
+  font-size: 11px;
+  font-family: 'DM Mono', monospace;
+  color: #0f1117;
+  border: 0.5px solid #4361ee;
+  border-radius: 4px;
+  padding: 2px 4px;
+  background: #fff;
+  outline: none;
+  text-align: center;
   flex-shrink: 0;
 }
 .si-delete {
