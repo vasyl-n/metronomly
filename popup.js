@@ -81,7 +81,7 @@ async function searchSong(query) {
     }
 
     showState('results');
-    showResults(searchData.search.slice(0, 10));
+    showResults(searchData.search);
 
   } catch (err) {
     console.error('searchSong error:', err);
