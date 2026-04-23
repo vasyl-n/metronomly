@@ -3,6 +3,7 @@
   "name": "Metronomly",
   "version": "1.0.0",
   "description": "Smart metronome that auto-fetches BPM from any song name. Build setlists, practice smarter.",
+  "homepage_url": "https://github.com/vasyl-n/metronomly",
   "action": {
     "default_popup": "popup.html",
     "default_icon": {

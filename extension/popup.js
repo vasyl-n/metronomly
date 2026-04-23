@@ -76,7 +76,7 @@ async function searchSong(query) {
     const searchRes  = await fetch(`${WORKER_URL}/search?q=${encodeURIComponent(query)}`);
     const results    = await searchRes.json();
 
-    if (!results.length) {
+    if (!Array.isArray(results) || !results.length) {
       showState('error'); return;
     }
 
@@ -84,7 +84,6 @@ async function searchSong(query) {
     showResults(results);
 
   } catch (err) {
-    console.error('searchSong error:', err);
     showState('error');
   }
 }
@@ -118,7 +117,6 @@ async function selectResult(result) {
     saveCache();
 
   } catch (err) {
-    console.error('selectResult error:', err);
     showState('error');
   }
 }
@@ -321,7 +319,7 @@ function renderSetlist() {
   setlist.forEach((song, idx) => {
     const item = document.createElement('div');
     item.className = 'setlist-item';
-    if (currentSong && song.name === currentSong.name) item.classList.add('active');
+    if (currentSong && song.name === currentSong.name && song.artist === currentSong.artist) item.classList.add('active');
 
     item.innerHTML = `
       <div class="si-indicator"></div>
@@ -372,7 +370,7 @@ function loadSetlist() {
 }
 
 function escHtml(str) {
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 // ─── INIT ────────────────────────────────────────────────────────────────────
