@@ -67,6 +67,7 @@ async function searchSong(query) {
     setBPM(currentSong.bpm);
     setTimeSig(currentSong.timeSig || '4/4');
     addSongBtn.disabled = false;
+    renderSetlist();
     return;
   }
 
@@ -110,6 +111,7 @@ async function selectResult(result) {
     setBPM(found.bpm);
     setTimeSig(found.timeSig);
     addSongBtn.disabled = false;
+    renderSetlist();
 
     const key = cacheKey(songInput.value.trim());
     bpmCache[key] = found;
