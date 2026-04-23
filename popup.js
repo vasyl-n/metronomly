@@ -45,13 +45,17 @@ function cacheKey(query) {
 }
 
 function loadCache() {
-  chrome.storage.local.get('metronomly_bpm_cache', (data) => {
-    if (data.metronomly_bpm_cache) bpmCache = data.metronomly_bpm_cache;
-  });
+  try {
+    chrome.storage.local.get('metronomly_bpm_cache', (data) => {
+      if (data.metronomly_bpm_cache) bpmCache = data.metronomly_bpm_cache;
+    });
+  } catch (e) {}
 }
 
 function saveCache() {
-  chrome.storage.local.set({ metronomly_bpm_cache: bpmCache });
+  try {
+    chrome.storage.local.set({ metronomly_bpm_cache: bpmCache });
+  } catch (e) {}
 }
 
 // ─── BPM LOOKUP ──────────────────────────────────────────────────────────────
@@ -103,15 +107,15 @@ async function selectResult(result) {
       timeSig: song.time_sig || '4/4',
     };
 
-    const key = cacheKey(songInput.value.trim());
-    bpmCache[key] = found;
-    saveCache();
-
     currentSong = found;
     showSongCard(found);
     setBPM(found.bpm);
     setTimeSig(found.timeSig);
     addSongBtn.disabled = false;
+
+    const key = cacheKey(songInput.value.trim());
+    bpmCache[key] = found;
+    saveCache();
 
   } catch (err) {
     console.error('selectResult error:', err);
@@ -351,16 +355,20 @@ function renderSetlist() {
 }
 
 function saveSetlist() {
-  chrome.storage.local.set({ metronomly_setlist: setlist });
+  try {
+    chrome.storage.local.set({ metronomly_setlist: setlist });
+  } catch (e) {}
 }
 
 function loadSetlist() {
-  chrome.storage.local.get('metronomly_setlist', (data) => {
-    if (data.metronomly_setlist) {
-      setlist = data.metronomly_setlist;
-      renderSetlist();
-    }
-  });
+  try {
+    chrome.storage.local.get('metronomly_setlist', (data) => {
+      if (data.metronomly_setlist) {
+        setlist = data.metronomly_setlist;
+        renderSetlist();
+      }
+    });
+  } catch (e) {}
 }
 
 function escHtml(str) {
