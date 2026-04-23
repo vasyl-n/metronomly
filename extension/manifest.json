@@ -17,5 +17,5 @@
     "128": "icons/icon128.png"
   },
   "permissions": ["storage"],
-  "host_permissions": ["https://api.getsong.co/*"]
+  "host_permissions": ["https://metronomly-worker.vasyl-nrk.workers.dev/*"]
 }

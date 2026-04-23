@@ -1,6 +1,5 @@
 // ─── CONFIG ─────────────────────────────────────────────────────────────────
-const API_KEY  = CONFIG.API_KEY;
-const API_BASE = 'https://api.getsong.co';
+const WORKER_URL = 'https://metronomly-worker.vasyl-nrk.workers.dev';
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
 let bpm          = 120;
@@ -73,15 +72,15 @@ async function searchSong(query) {
 
   showState('loading');
   try {
-    const searchRes  = await fetch(`${API_BASE}/search/?api_key=${API_KEY}&type=song&lookup=${encodeURIComponent(query)}`);
-    const searchData = await searchRes.json();
+    const searchRes  = await fetch(`${WORKER_URL}/search?q=${encodeURIComponent(query)}`);
+    const results    = await searchRes.json();
 
-    if (!searchData.search || searchData.search.length === 0) {
+    if (!results.length) {
       showState('error'); return;
     }
 
     showState('results');
-    showResults(searchData.search);
+    showResults(results);
 
   } catch (err) {
     console.error('searchSong error:', err);
@@ -92,19 +91,18 @@ async function searchSong(query) {
 async function selectResult(result) {
   showState('loading');
   try {
-    const songRes  = await fetch(`${API_BASE}/song/?api_key=${API_KEY}&id=${result.id}`);
-    const songData = await songRes.json();
-    const song     = songData.song;
+    const songRes = await fetch(`${WORKER_URL}/song?id=${result.id}`);
+    const song    = await songRes.json();
 
-    if (!song || !song.tempo) {
+    if (!song || !song.bpm) {
       showState('error'); return;
     }
 
     const found = {
       name:    song.title,
-      artist:  song.artist?.name || 'Unknown Artist',
-      bpm:     Math.round(parseFloat(song.tempo)),
-      timeSig: song.time_sig || '4/4',
+      artist:  song.artist,
+      bpm:     song.bpm,
+      timeSig: song.timeSig || '4/4',
     };
 
     currentSong = found;
@@ -130,7 +128,7 @@ function showResults(results) {
     item.className = 'sr-item';
     item.innerHTML = `
       <div class="sr-title">${escHtml(result.title)}</div>
-      <div class="sr-artist">${escHtml(result.artist?.name || 'Unknown Artist')}</div>
+      <div class="sr-artist">${escHtml(result.artist || 'Unknown Artist')}</div>
     `;
     item.addEventListener('click', () => selectResult(result));
     searchResultsEl.appendChild(item);
