@@ -178,6 +178,41 @@ body {
   50% { opacity: 0.3; }
 }
 
+/* Search results picker */
+.search-results {
+  border: 0.5px solid #e2e4e9;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 0;
+  animation: fadeIn 0.15s ease;
+}
+.sr-item {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 0.5px solid #f0f1f5;
+  transition: background 0.1s;
+}
+.sr-item:last-child { border-bottom: none; }
+.sr-item:hover { background: #f7f8fa; }
+.sr-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f1117;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sr-artist {
+  font-size: 11px;
+  color: #6b7280;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* BPM Display */
 .bpm-row {
   display: flex;

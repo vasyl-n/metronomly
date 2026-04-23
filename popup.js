@@ -34,9 +34,10 @@ const minusBtn   = document.getElementById('minusBtn');
 const plusBtn    = document.getElementById('plusBtn');
 const tapBtn     = document.getElementById('tapBtn');
 
-const addSongBtn   = document.getElementById('addSongBtn');
-const setlistEl    = document.getElementById('setlist');
-const setlistEmpty = document.getElementById('setlistEmpty');
+const addSongBtn      = document.getElementById('addSongBtn');
+const setlistEl       = document.getElementById('setlist');
+const setlistEmpty    = document.getElementById('setlistEmpty');
+const searchResultsEl = document.getElementById('searchResults');
 
 // ─── CACHE ───────────────────────────────────────────────────────────────────
 function cacheKey(query) {
@@ -61,6 +62,7 @@ async function searchSong(query) {
     currentSong = bpmCache[key];
     showSongCard(currentSong);
     setBPM(currentSong.bpm);
+    setTimeSig(currentSong.timeSig || '4/4');
     addSongBtn.disabled = false;
     return;
   }
@@ -74,8 +76,19 @@ async function searchSong(query) {
       showState('error'); return;
     }
 
-    const songId  = searchData.search[0].id;
-    const songRes = await fetch(`${API_BASE}/song/?api_key=${API_KEY}&id=${songId}`);
+    showState('results');
+    showResults(searchData.search.slice(0, 5));
+
+  } catch (err) {
+    console.error('searchSong error:', err);
+    showState('error');
+  }
+}
+
+async function selectResult(result) {
+  showState('loading');
+  try {
+    const songRes  = await fetch(`${API_BASE}/song/?api_key=${API_KEY}&id=${result.id}`);
     const songData = await songRes.json();
     const song     = songData.song;
 
@@ -84,38 +97,57 @@ async function searchSong(query) {
     }
 
     const found = {
-      name:   song.title,
-      artist: song.artist?.name || 'Unknown Artist',
-      bpm:    Math.round(parseFloat(song.tempo)),
+      name:    song.title,
+      artist:  song.artist?.name || 'Unknown Artist',
+      bpm:     Math.round(parseFloat(song.tempo)),
+      timeSig: song.time_sig || '4/4',
     };
 
+    const key = cacheKey(songInput.value.trim());
     bpmCache[key] = found;
     saveCache();
 
     currentSong = found;
     showSongCard(found);
     setBPM(found.bpm);
+    setTimeSig(found.timeSig);
     addSongBtn.disabled = false;
 
   } catch (err) {
-    console.error(err);
+    console.error('selectResult error:', err);
     showState('error');
   }
+}
+
+function showResults(results) {
+  searchResultsEl.innerHTML = '';
+  results.forEach(result => {
+    const item = document.createElement('div');
+    item.className = 'sr-item';
+    item.innerHTML = `
+      <div class="sr-title">${escHtml(result.title)}</div>
+      <div class="sr-artist">${escHtml(result.artist?.name || 'Unknown Artist')}</div>
+    `;
+    item.addEventListener('click', () => selectResult(result));
+    searchResultsEl.appendChild(item);
+  });
 }
 
 function showState(state) {
   songCard.classList.add('hidden');
   searchError.classList.add('hidden');
   searchLoading.classList.add('hidden');
+  searchResultsEl.classList.add('hidden');
   if (state === 'loading') searchLoading.classList.remove('hidden');
   if (state === 'error')   searchError.classList.remove('hidden');
   if (state === 'card')    songCard.classList.remove('hidden');
+  if (state === 'results') searchResultsEl.classList.remove('hidden');
 }
 
 function showSongCard(song) {
-  songNameEl.textContent  = song.name;
+  songNameEl.textContent   = song.name;
   songArtistEl.textContent = song.artist;
-  bpmBadge.textContent    = `${song.bpm} BPM`;
+  bpmBadge.textContent     = `${song.bpm} BPM`;
   showState('card');
 }
 
@@ -231,6 +263,17 @@ tapBtn.addEventListener('click', () => {
 });
 
 // ─── TIME SIGNATURE ──────────────────────────────────────────────────────────
+function setTimeSig(timeSig) {
+  const beats = parseInt(timeSig);
+  const btn = document.querySelector(`.timesig-btn[data-beats="${beats}"]`);
+  if (!btn) return;
+  document.querySelectorAll('.timesig-btn').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+  beatsPerBar = beats;
+  renderBeatDots();
+  if (isPlaying) { stopMetronome(); startMetronome(); }
+}
+
 document.querySelectorAll('.timesig-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.timesig-btn').forEach(b => b.classList.remove('sel'));
@@ -299,6 +342,7 @@ function renderSetlist() {
       currentSong = song;
       showSongCard(song);
       setBPM(song.bpm);
+      setTimeSig(song.timeSig || '4/4');
       renderSetlist();
     });
 
