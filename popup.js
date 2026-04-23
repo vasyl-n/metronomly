@@ -1,5 +1,5 @@
 // ─── CONFIG ─────────────────────────────────────────────────────────────────
-const API_KEY  = 'YOUR_API_KEY_HERE';
+const API_KEY  = CONFIG.API_KEY;
 const API_BASE = 'https://api.getsong.co';
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
